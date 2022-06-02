@@ -1,3 +1,10 @@
+"""
+Input script for analysing wake blink eye movements from EEG&EOG data
+author: @agpr141
+date completed: 02.06.22
+"""
+
+# import modules
 import os
 from blink_automatic_detection_funcs import *
 
