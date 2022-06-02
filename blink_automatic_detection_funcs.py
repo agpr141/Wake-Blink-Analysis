@@ -140,38 +140,11 @@ def blink_analyse(weo, pptid, night, group):
     ax.plot(e2_peaks, e1_uv[e2_peaks], 'x', color='blue', label='E2 Peaks')
     plt.legend()
 
-    # calculate eye blink order & time delay
-    # calculate difference in peak times
-    peak_diff_samp = []
-    zip_peaks = zip(fp1_peaks, fp2_peaks)
-    for list1_i, list2_i in zip_peaks:
-        peak_diff_samp.append(list1_i - list2_i)
-    # create var for delay in samples
-    right_first_delay = []
-    left_first_delay = []
-    for i in peak_diff_samp:
-        if i > 0:
-            msec = (i/512)*1000
-            right_first_delay.append(msec)
-        elif i < 0:
-            msec = (i/512)*1000
-            msec_abs = abs(msec)
-            left_first_delay.append(msec_abs)
-    # blink order: right first = 1; left first = 2; together = 3
-    blink_order = []
-    for i in peak_diff_samp:
-        if i > 0:
-            blink_order.append(1)
-        elif i < 0:
-            blink_order.append(2)
-        elif i == 0:
-            blink_order.append(3)
-
     # populate variables for use in for loop
     chans = [fp1_uv, fp2_uv]
     ch_peaks = [fp1_peaks, fp2_peaks]
     ch_name = ['Fp1', 'Fp2']
-
+    start_list = []
     # create dict struct to store output values in
     outer_dict = defaultdict(dict)
     # for loop to extract blink characteristics
@@ -335,11 +308,16 @@ def blink_analyse(weo, pptid, night, group):
                 abs_rise_by_sample, abs_rise_by_sf = slope(x1, y1, x2, y2)
                 abs_rise_by_sf_pos = abs(abs_rise_by_sf)
                 down_grad.append(abs_rise_by_sample)
+
+                if counter == (len(m))-1:
+                    start_list.append([start_indexes])
             except:
                 print('issue with', counter)
                 up_phase.append('NaN')
                 down_phase.append('NaN')
                 blink_dur.append('NaN')
+
+
         # convert variables to array for mean calculations
         up_arr = np.array(up_phase).astype(np.float)
         down_arr = np.array(down_phase).astype(np.float)
@@ -347,33 +325,64 @@ def blink_analyse(weo, pptid, night, group):
         bl_amp_arr = np.array(blink_amplitude).astype(np.float)
         up_grad_arr = np.array(up_grad).astype(np.float)
         down_grad_arr = np.array(down_grad).astype(np.float)
-        right_first_arr = np.array(right_first_delay).astype(np.float)
-        left_first_arr = np.array(left_first_delay).astype(np.float)
+
         mean_up = np.nanmean(up_arr)
         mean_down = np.nanmean(down_arr)
         mean_dur = np.nanmean(bl_dur_arr)
         mean_amp = np.nanmean(bl_amp_arr)
         mean_up_grad = np.nanmean(up_grad_arr)
         mean_down_grad = np.nanmean(down_grad_arr)
-        mean_right_first = np.nanmean(right_first_arr)
-        mean_left_first = np.nanmean(left_first_arr)
+
         # create dict struct to store output values in
-        inner_dict = {'pptID': pptid, 'Night': night, 'Group': group, 'Channel': n, 'Blink Order': blink_order,
-                      'Mean Right First Delay (ms)': mean_right_first, 'Mean Left_First_Delay (ms)': mean_left_first,
-                      'Blink Number': total_blink, 'Blink Rate': blink_rate, 'Blink Density': blink_density,
-                      'Blink Amplitude (uv)': blink_amplitude, 'Blink Duration (s)': blink_dur,
-                      'UpPhase Duration (s)': up_phase, 'DownPhase Duration (s)': down_phase,
+        inner_dict = {'pptID': pptid, 'Night': night, 'Group': group, 'Channel': n,
+                      'Blink Number': total_blink, 'Blink Rate': blink_rate, 'Blink Density (s)': blink_density,
+                      'Blink Amplitude (uv)': blink_amplitude, 'Blink Duration (ms)': blink_dur,
+                      'UpPhase Duration (ms)': up_phase, 'DownPhase Duration (ms)': down_phase,
                       'UpPhase Gradient': up_grad_arr, 'DownPhase Gradient': down_grad_arr,
-                      'Mean Blink Amplitude (uv)': mean_amp, 'Mean Blink Duration (s)': mean_dur,
-                      'Mean Up Phase Duration (s)': mean_up, 'Mean Down Phase Duration (s)': mean_down,
+                      'Mean Blink Amplitude (uv)': mean_amp, 'Mean Blink Duration (ms)': mean_dur,
+                      'Mean Up Phase Duration (ms)': mean_up, 'Mean Down Phase Duration (ms)': mean_down,
                       'Mean Up Phase Gradient': mean_up_grad, 'Mean Down Phase Gradient': mean_down_grad}
 
         if n not in outer_dict:
             outer_dict[n] = inner_dict
 
+    # calculate eye blink order & time delay
+    # calculate difference in peak times
+    peak_diff_samp = []
+    zip_peaks = zip(start_list[0][0], start_list[1][0])
+    for list1_i, list2_i in zip_peaks:
+        peak_diff_samp.append(list1_i - list2_i)
+    # create var for delay in samples
+    right_first_delay = []
+    left_first_delay = []
+    for i in peak_diff_samp:
+        if i > 0:
+            msec = (i / 512) * 1000
+            right_first_delay.append(msec)
+        elif i < 0:
+            msec = (i / 512) * 1000
+            msec_abs = abs(msec)
+            left_first_delay.append(msec_abs)
+    # blink order: right first = 1; left first = 2; together = 3
+    blink_order = []
+    for i in peak_diff_samp:
+        if i > 0:
+            blink_order.append(1)
+        elif i < 0:
+            blink_order.append(2)
+        elif i == 0:
+            blink_order.append(3)
+
+    right_first_arr = np.array(right_first_delay).astype(np.float)
+    left_first_arr = np.array(left_first_delay).astype(np.float)
+    mean_right_first = np.nanmean(right_first_arr)
+    mean_left_first = np.nanmean(left_first_arr)
     # convert dictionary to dataframe and store as csv
     df = pandas.DataFrame(outer_dict)
     df_t = df.T
+    df_t['Blink Order'] = [blink_order for _ in range(len(df_t))]
+    df_t['Mean Right First Delay (ms)'] = mean_right_first
+    df_t['Mean Left First Delay (ms)'] = mean_left_first
     df_t.to_csv('eyeblink_stats.csv', index=False)
 
     # for plotting to check!
