@@ -1,7 +1,7 @@
 """
 Functions script for analysing wake blink eye movements from EEG&EOG data
 author: @agpr141
-date completed: 02.06.22
+date completed: 08.06.22
 
 main function 'blink_analyse':
 1. extracts & cleans fp1/fp2/eog1/eog2 data from .edf
